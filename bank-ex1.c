@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define num_tellers  4
+#define num_tellers  2
 
 struct node {
     int duration, time, type;
@@ -23,8 +23,9 @@ float count, tottime;
 void arrive(int atime, int dur); 
 void depart(int qindx, int dtime);
 void insert(struct queue *pq, NODEPTR nodeX);
-void removequeue(struct queue *pq, NODEPTR nodeX); 
+void removequeue(struct queue *pq); 
 void place(NODEPTR *plist, NODEPTR nodeX); 
+void placeDeparture(NODEPTR *plist, NODEPTR nodeX); 
 void push(NODEPTR *plist, NODEPTR nodeX); 
 void insafter(NODEPTR q, NODEPTR nodeX); 
 void popsub(NODEPTR *plist, NODEPTR nodeX); 
@@ -41,7 +42,7 @@ int main() {
         q[qindx].rear = NULL;
     }
     /* initialize the event list with the first arrival */
-    printf("enter time and duration\n");
+    //printf("enter time and duration\n");
     scanf("%d %d", &auxinfo.time, &auxinfo.duration);
     auxinfo.type = -1; /* an arrival */
     place(&evlist, &auxinfo);
@@ -60,6 +61,9 @@ int main() {
             /* a departure */
             qindx = auxinfo.type;
             dtime = auxinfo.time;
+            tottime = tottime + (dtime-auxinfo.duration);
+            count++;
+            
             depart(qindx, dtime);
         }
     }
@@ -71,6 +75,7 @@ int main() {
 }
 
 void arrive(int atime, int dur) {
+    NODEPTR p;
     int j, small;
     /* find the shortest queue */
     j = 0;
@@ -90,16 +95,19 @@ void arrive(int atime, int dur) {
     /* Check if this is the only node on the queue. If it is, */
     /* the customer's departure node must be placed on the event list */
     if (q[j].num == 1) {
-        auxinfo.time = atime + dur;
-        place(&evlist, &auxinfo);
+        p = q[j].front;
+        p->time = atime + dur;
+        p->duration = atime;
+        removequeue(&q[j]);
+        placeDeparture(&evlist, p);
     }
 
     /* If any input remains, read the next data pair and */
     /* place an arrival on the event list. */
-    printf("enter time\n");
-    if (scanf("%d", &auxinfo.time) != EOF) {
-        printf("enter duration\n");
-        scanf("%d", &auxinfo.duration);
+    // printf("enter time\n");
+    if (scanf("%d %d", &auxinfo.time, &auxinfo.duration) != EOF) {
+        //printf("enter duration\n");
+        //scanf("%d", &auxinfo.duration);
         auxinfo.type = -1;
         place(&evlist, &auxinfo);
     }
@@ -107,17 +115,21 @@ void arrive(int atime, int dur) {
 
 void depart(int qindx, int dtime) {
     NODEPTR p;
-    removequeue(&q[qindx], &auxinfo);
-    tottime = tottime + (dtime - auxinfo.time);
-    count++;
     /* If there are any more customers on the queue, */
     /* place the departure of the next customer onto */
     /* the event list after computing its departure time */
+
+    // Remove customer from queue
+    (q[qindx].num)--;
+
+    int temp = 0;
     if (q[qindx].num > 0) {
         p = q[qindx].front;
-        auxinfo.time = dtime + p->duration;
-        auxinfo.type = qindx;
-        place(&evlist, &auxinfo);
+        temp = p->time;
+        p->time = dtime + p->duration;
+        p->duration = temp;
+        removequeue(&q[qindx]);
+        placeDeparture(&evlist, p);
     }
 }
 
@@ -187,6 +199,29 @@ void insafter(NODEPTR q, NODEPTR nodeX) {
     }
 }
 
+void placeDeparture(NODEPTR *plist, NODEPTR nodeX) {
+    NODEPTR p, q, newNode;
+    q = NULL;
+    int time = nodeX->time;
+
+    for (p = *plist; p != NULL && time > p->time; p = p->next) {
+        q = p;
+    }
+
+    if (q == NULL) { /* Insert x at the head of the list */
+        nodeX->next = *plist;
+        *plist = nodeX;
+    } else {
+        if (q->next == NULL) {
+            q->next = nodeX;
+            nodeX->next = NULL;
+        } else {
+            nodeX->next = q->next;
+            q->next = nodeX;
+        }
+    }
+}
+
 void popsub(NODEPTR *plist, NODEPTR nodeX) {
     NODEPTR p;
     p = *plist;
@@ -205,14 +240,10 @@ NODEPTR getnode() {
     return p;
 }
 
-void removequeue(struct queue *pq, NODEPTR nodeX) {
+void removequeue(struct queue *pq) {
     NODEPTR p;
 
     p = pq->front;
-
-    nodeX->time = p->time;
-    nodeX->duration = p->duration;
-    nodeX->type = p->type;
 
     if (pq->num == 1) {
         pq->front = NULL;
@@ -221,8 +252,8 @@ void removequeue(struct queue *pq, NODEPTR nodeX) {
         pq->front = p->next;
     }
 
-    free(p);
+    //free(p);
 
-    (pq->num)--;
+    //(pq->num)--;
 }
 
