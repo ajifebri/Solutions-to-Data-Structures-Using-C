@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 
 #define num_tellers 2
-
-#define max_customers 1000
 
 struct node {
     int duration, time, type;
@@ -21,10 +18,8 @@ struct queue q[num_tellers];
 struct node auxinfo;
 NODEPTR evlist;
 int atime, dtime, dur, qindx;
-float tottime, average_time, std;
-int count;
-
-int time_spent[max_customers];
+int timestamp;
+float count, tottime;
 
 void arrive(int atime, int dur); 
 void depart(int qindx, int dtime);
@@ -34,6 +29,7 @@ void place(NODEPTR *plist, NODEPTR nodeX);
 void push(NODEPTR *plist, NODEPTR nodeX); 
 void insafter(NODEPTR q, NODEPTR nodeX); 
 void popsub(NODEPTR *plist, NODEPTR nodeX); 
+int total_length(struct queue *pq); 
 NODEPTR getnode();
 
 int main() {
@@ -54,34 +50,35 @@ int main() {
 
     /* run the simulation as long as */
     /* the event list is not empty */
+    timestamp = 0;
+    int prev_time = 0;
+    int prev_length = 0;
+    float wait_time = 0.0;
+    int first_arrival = auxinfo.time;
     while (evlist != NULL) {
+        //prev_length = q[0].num;
+        prev_length = total_length(&q[0]);
+        prev_time = timestamp;
         popsub(&evlist, &auxinfo);
         /* check if the next event is an arrival or departure */
         if (auxinfo.type == -1) {
             /* an arrival */
-            atime = auxinfo.time;
+            timestamp = auxinfo.time;
             dur = auxinfo.duration;
-            arrive(atime, dur);
+            arrive(timestamp, dur);
         } else {
             /* a departure */
             qindx = auxinfo.type;
-            dtime = auxinfo.time;
-            depart(qindx, dtime);
+            timestamp = auxinfo.time;
+            depart(qindx, timestamp);
         }
-    }
-
-    average_time = (float) tottime/count;
-
-    /* Computing the standard deviation */
-    float mean_squares = 0.0;
-    for (int i=0; i<count; i++) {
-        mean_squares += ((time_spent[i] - average_time)*(time_spent[i] - average_time));
-    }
-    std = sqrt(mean_squares/(count-1.0));
+        printf("Time: %d, Length: %d, Prev_time: %d, Prev_length: %d\n", timestamp, q[0].num, prev_time, prev_length);
+        wait_time += (timestamp-prev_time)*prev_length;
+    } 
 
     printf("total time is %4.2f\n", tottime);
-    printf("average time is %4.2f\n", average_time);
-    printf("standard deviation is %4.2f\n", std);
+    printf("average time is %4.2f\n", tottime/count);
+    printf("average queue length is %4.2f\n", wait_time/(num_tellers*(timestamp-first_arrival)));
 
     return 0;
 }
@@ -122,11 +119,10 @@ void arrive(int atime, int dur) {
 
 void depart(int qindx, int dtime) {
     NODEPTR p;
-    int cust_time;
+    //printf("Time: %d, Length: %d\n", dtime, q[0].num);
     removequeue(&q[qindx], &auxinfo);
-    cust_time = dtime - auxinfo.time;
-    tottime = tottime + cust_time;
-    time_spent[count] = cust_time;
+
+    tottime = tottime + (dtime - auxinfo.time);
     count++;
     /* If there are any more customers on the queue, */
     /* place the departure of the next customer onto */
@@ -242,5 +238,14 @@ void removequeue(struct queue *pq, NODEPTR nodeX) {
     free(p);
 
     (pq->num)--;
+}
+
+int total_length(struct queue *pq) {
+    int sum = 0;
+    for (int i=0; i<num_tellers; i++) {
+        sum += pq->num;
+        pq++;
+    }
+    return sum;
 }
 
