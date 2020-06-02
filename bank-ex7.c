@@ -107,7 +107,8 @@ void arrive(int atime, int dur) {
     /* If any input remains, read the next data pair and */
     /* place an arrival on the event list. */
     //printf("enter time\n");
-    if (scanf("%d %d", &auxinfo.time, &auxinfo.duration) != EOF) {
+    if (scanf("%d", &auxinfo.time) != EOF) {
+        auxinfo.duration = generate_duration_uniform(MIN_DURATION, MAX_DURATION);
         //printf("enter duration\n");
         auxinfo.type = -1;
         place(&evlist, &auxinfo);
