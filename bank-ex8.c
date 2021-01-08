@@ -4,12 +4,12 @@
 #include <time.h>
 
 #define num_workers 10
-#define num_polishing 1
+#define num_polishing 4
 #define min_assembly 1
 #define max_assembly 15
 #define mean_polishing 20
 #define std_polishing 7
-#define max_items_polish 1000
+#define max_items_polish 100000
 
 struct node {
     int time, finish_assembly, start_polish;
@@ -46,17 +46,18 @@ int main() {
     for (int i=0; i<num_workers; i++) {
         dur_assembly = generate_duration_uniform(min_assembly, max_assembly);
         auxinfo.time = dur_assembly;
-        //printf("assembly time: %d\n", dur_assembly);
+        auxinfo.finish_assembly = dur_assembly;
         place(&queue_list, &auxinfo);
     }
 
     /* Front queue */
-    for (int i=0; i<num_polishing; i++) {
+    int max_p = num_polishing;
+    if (num_workers < num_polishing) max_p=num_workers;
+    for (int i=0; i < max_p; i++) {
         int dur_polish = 0;
         while (dur_polish < 5) {
             dur_polish = generate_duration_normal(mean_polishing, std_polishing);
         }
-        //printf("polishing time: %d\n", dur_polish);
 
         /* Give the front of the queue the polishing machine */
         popsub(&queue_list, &auxinfo);
@@ -74,9 +75,6 @@ int main() {
         dtime = auxinfo.time;
         swtime = auxinfo.finish_assembly; 
         sptime = auxinfo.start_polish;
-        //printf("time_departure_event: %d\n", dtime);
-        //printf("start_wait: %d\n", swtime);
-        //printf("start_polish: %d\n", sptime);
 
         add_assembly(dtime); /* after polishing, this worker begins assembly again */
 
@@ -97,10 +95,9 @@ int main() {
 void add_assembly(int atime) {
     int dur_assembly;
     dur_assembly = generate_duration_uniform(min_assembly, max_assembly);
-    //printf("assembly time: %d\n", dur_assembly);
     auxinfo.time = atime + dur_assembly; /* finish assembly time */
     auxinfo.finish_assembly = atime + dur_assembly;
-    place(&queue_list, &auxinfo); /* sorted by time of ready to polish (finish assembly time) */
+    place(&queue_list, &auxinfo); /* sorted by the time of ready to polish (finish assembly time) */
 }
 
 void finish_polish(int finish_time, int start_polish, int finish_assembly) {
@@ -113,11 +110,13 @@ void finish_polish(int finish_time, int start_polish, int finish_assembly) {
         dur_polish = generate_duration_normal(mean_polishing, std_polishing);
     }
 
-    //printf("polishing time: %d\n", dur_polish);
-
     /* Give the front of the queue the polishing machine */
     popsub(&queue_list, &auxinfo);
-    auxinfo.start_polish = finish_time;
+    if (finish_time > auxinfo.finish_assembly) {
+        auxinfo.start_polish = finish_time;
+    } else {
+        auxinfo.start_polish = auxinfo.finish_assembly; /* finishing assembly first */
+    }
     auxinfo.time = auxinfo.start_polish + dur_polish;
     place(&polish_list, &auxinfo); /* sorted by the time of finish polishing */
 }
