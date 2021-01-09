@@ -1,4 +1,29 @@
+#include <stdio.h>
+
 #define NUMELTS 1000
+#define NUM_DIGITS 2
+
+int power(int base, int exp);
+void radixsort(int x[], int n);
+
+int main() {
+    int length = 8;
+    int a[8] = {25, 57, 48, 37, 12, 92, 86, 33};
+
+    for (int i=0; i<length; i++) {
+        printf("%d ", a[i]);
+    }
+    printf("\n");
+
+    radixsort(a, length);
+    for (int i=0; i<length; i++) {
+        printf("%d ", a[i]);
+    }
+    printf("\n");
+
+    return 0;
+
+}
 
 void radixsort(int x[], int n) {
     int front[10], rear[10];
@@ -18,7 +43,7 @@ void radixsort(int x[], int n) {
     node[n-1].next = -1;
     first = 0; /* first is the head of the linked list */
 
-    for (k=1; k < 5; k++) {
+    for (k=1; k <= NUM_DIGITS; k++) {
         /* Assume we have four-digit numbers */
         for (i=0; i<10; i++) {
             /* Initialize queues */
@@ -65,4 +90,12 @@ void radixsort(int x[], int n) {
         x[i] = node[first].info;
         first = node[first].next;
     }
+}
+
+int power(int base, int exp) {
+    int result = 1;
+    for (int i=0; i<exp; i++) {
+        result *= base;
+    }
+    return result;
 }
